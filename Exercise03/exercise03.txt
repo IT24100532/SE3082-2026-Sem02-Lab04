@@ -1,0 +1,22 @@
+Exercise 3: Monte Carlo Pi (10,000,000 points) with mutexes
+Run on: Debian Linux container (Docker), gcc 14.2, 8 logical cpus. Build: make   Run: make run
+
+montecarlo_critical.c and montecarlo_atomic.c protect "inside++" with critical / atomic.
+Each thread uses its own rand_r() seed, because rand() is not thread-safe.
+
+Results (Lab 03 serial: pi = 3.141386 in 0.153 s):
+threads   critical                      atomic
+          pi        inside    time      pi        inside    time
+1         3.141386  7853466   0.275     3.141386  7853466   0.137
+2         3.140890  7852224   0.368     3.140890  7852224   0.211
+4         3.141423  7853558   1.360     3.141423  7853558   0.308
+8         3.141721  7854303   2.130     3.141721  7854303   0.334
+16        3.141572  7853931   1.326     3.141572  7853931   0.339
+
+The answer is now correct: about 3.141 for every thread count, and critical and atomic
+give exactly the same count. (The value changes a little between thread counts because
+each thread starts its own random sequence, so different points are drawn. That is
+normal for Monte Carlo, not a bug.)
+It is faster than Exercise 1 because only about 79% of the iterations (the points inside)
+need the lock, but it is still slower than serial for the same reason: the threads wait
+for each other at the lock.

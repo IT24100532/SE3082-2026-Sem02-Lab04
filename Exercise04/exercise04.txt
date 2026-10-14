@@ -1,0 +1,48 @@
+Exercise 4: Pi with private, shared, firstprivate and an atomic update
+Run on: Debian Linux container (Docker), gcc 14.2, 8 logical cpus. Build: make   Run: make run4
+Plots: python plot.py (needs matplotlib) -> threads_vs_time.png, threads_vs_speedup.png
+
+1. Data-sharing clauses in pi_timed.c:
+   - private(x, partial): every thread has its own x and its own running total.
+   - shared(sum): one result that all threads add to at the end.
+   - firstprivate(step): every thread gets its own copy of step, already set to 1/N.
+2. atomic: each thread adds its partial sum to sum ONCE (#pragma omp atomic), so there
+   are only as many locked updates as threads, instead of 100 million.
+3. Timing: 10 runs, the first 3 are left out, and the other 7 are averaged.
+4. Threads 1 to 24 in steps of 4 (OMP_NUM_THREADS), static schedule:
+
+threads   average time (s)   speedup (T1 / TN)
+1         0.097908           1.00
+4         0.027826           3.52
+8         0.021881           4.47
+12        0.021287           4.60
+16        0.020830           4.70
+20        0.020170           4.85
+24        0.020364           4.81
+
+5–6. See threads_vs_time.png and threads_vs_speedup.png.
+The answer is correct for every thread count. The speedup grows quickly up to 8 threads
+and then flattens at about 4.8x: the machine has 8 cores, so more than 8 threads just
+share the same cores. It is not 8x because starting threads and the final atomic adds
+cost time, and the loop is short (0.1 s).
+
+7. Different schedules at 24 threads (OMP_SCHEDULE, the loop uses schedule(runtime)):
+schedule       average time (s)
+static         0.021544
+static,1       0.112221
+static,1000    0.020519
+dynamic        5.161695
+dynamic,1000   0.019596
+guided         0.019649
+auto           0.021246
+
+static, guided, auto and chunked dynamic (dynamic,1000) are all about equally fast,
+because every iteration does the same amount of work. static,1 is 5x slower: threads
+take turns on neighbouring iterations, which wastes the cache. Plain dynamic (chunk 1)
+is about 250x slower: every single iteration is handed out from a shared queue, so the
+threads spend almost all their time asking for work.
+
+Note: with schedule(runtime) and no OMP_SCHEDULE set, gcc uses dynamic with chunk 1.
+My first run forgot to set it, and every thread count took about 5 s. That is why
+"make run4" sets OMP_SCHEDULE=static for the thread sweep.
+8. Remember to stop your instances when you finish.

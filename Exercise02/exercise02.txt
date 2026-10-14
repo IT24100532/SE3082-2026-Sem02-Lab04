@@ -1,0 +1,18 @@
+Exercise 2: S = sum_{i=1..N} [ i - i^2 + sqrt(2 x (i + 1)) ], N = 10,000,000, with mutexes
+Run on: Debian Linux container (Docker), gcc 14.2, 8 logical cpus. Build: make   Run: make run
+
+sum_critical.c and sum_atomic.c protect "S += term" with critical / atomic.
+
+Results (Lab 03 serial: S = -3.333333e+20 in 0.0098 s):
+threads   critical               atomic
+          S             time     S             time
+1         -3.333333e+20 0.104    -3.333333e+20 0.069
+2         -3.333333e+20 0.492    -3.333333e+20 0.085
+4         -3.333333e+20 1.008    -3.333333e+20 0.213
+8         -3.333333e+20 2.525    -3.333333e+20 0.675
+16        -3.333333e+20 0.907    -3.333333e+20 0.560
+
+The answer is now correct for every thread count (the racy Lab 03 version gave values
+like -1.0e+20). Like Exercise 1, it is slower than serial (10 ms): every addition waits
+for the lock, so the threads queue up one by one. atomic is cheaper than critical.
+Run "make run" on both EC2 instances to compare them (needs your AWS account).

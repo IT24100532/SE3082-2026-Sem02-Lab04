@@ -1,0 +1,36 @@
+Exercise 1: fixing the Pi data race with (a) critical and (b) atomic
+Run on: Debian Linux container (Docker), gcc 14.2, 8 logical cpus. Build: make   Run: make run
+
+lab04a.c = critical section, lab04b.c = atomic section, around "sum += term".
+Compile and run:  gcc -fopenmp lab04a.c -o lab04a.o && OMP_NUM_THREADS=<n> ./lab04a.o
+
+Results (N = 100,000,000; Lab 03 times for comparison):
+threads   Lab 03 (data race)          critical                atomic
+          pi          time (s)        pi        time (s)      pi        time (s)
+serial    3.14159265  0.099
+1         3.14159265  0.124           3.14159265  0.995       3.14159265  0.690
+2         1.85459044  0.051           3.14159265  4.429       3.14159265  1.084
+4         0.97991465  0.028           3.14159265 11.463       3.14159265  2.221
+8         0.41950775  0.027           3.14159265 21.578       3.14159265  6.187
+16        0.16485505  0.024           3.14159265  8.466       3.14159265  5.155
+
+2. Is the answer correct now? YES. With critical or atomic, pi = 3.14159265358... for
+   every thread count. (The last few digits change slightly because the threads add
+   their terms in a different order, and floating-point rounding depends on the order.)
+
+3. Speed compared with Lab 03: much SLOWER. The racy Lab 03 version was fast but wrong.
+   Now every single one of the 100 million additions has to wait for the lock, so only
+   one thread can add at a time and the threads spend most of their time waiting.
+   atomic is 3-5x faster than critical, because an atomic update is one special CPU
+   instruction, while critical has to lock and unlock a general mutex.
+
+4. Serial vs parallel: serial takes 0.1 s; both fixed parallel versions take 1-22 s.
+   Adding threads makes it slower, not faster, because they all fight over the same lock.
+   (Exercise 4 shows the right way: each thread sums privately, then does ONE atomic add.)
+
+5. Cores: 8 logical cpus (nproc).
+
+6–7. A higher EC2 configuration needs your AWS account. Run "make run" on both instances
+     and compare. Speedup = time(1 thread) / time(N threads); here it is below 1 for
+     every N > 1 (for example atomic with 8 threads: 0.690 / 6.187 = 0.11).
+8. Remember to stop your instances when you finish.
